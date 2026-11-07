@@ -1,0 +1,24 @@
+# /docker/waze-eta/compose.yaml on the server, next to the coach project.
+# Served at https://${DOMAIN}/waze/... : the longer rule wins over coach's Host-only rule, and /waze is stripped.
+name: waze-eta
+services:
+  eta:
+    build:
+      context: ./src
+      dockerfile: deploy/Dockerfile
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      LOCATION_PATH: /data/location.json
+    volumes:
+      - ./data:/data
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=waze-eta_default
+      - traefik.http.routers.waze-eta.rule=Host(`${DOMAIN}`) && PathPrefix(`/waze`)
+      - traefik.http.routers.waze-eta.entrypoints=${TRAEFIK_ENTRYPOINT}
+      - traefik.http.routers.waze-eta.tls=true
+      - traefik.http.routers.waze-eta.tls.certresolver=${TRAEFIK_CERTRESOLVER}
+      - traefik.http.routers.waze-eta.middlewares=waze-eta-strip
+      - traefik.http.middlewares.waze-eta-strip.stripprefix.prefixes=/waze
+      - traefik.http.services.waze-eta.loadbalancer.server.port=8080
